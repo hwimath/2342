@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>휘매쓰 연산 챌린지!</title>
+    <style>
+        /* 폰트 로드 */
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 0;
+        }
+        #game-container {
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h1 {
+            color: #333;
+            font-size: 48px;
+            margin-bottom: 30px;
+        }
+        #difficulty-selection, #game-screen, #result-screen {
+            display: none;
+        }
+        .button {
+            padding: 15px 30px;
+            font-size: 24px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 50px;
+            background-color: #ff7f50;
+            color: white;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .button:hover {
+            background-color: #ff6347;
+            transform: translateY(-3px);
+        }
+        #question {
+            font-size: 28px;
+            margin: 20px 0;
+            color: #333;
+        }
+        #score, #chance, #total-time {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #555;
+        }
+        #answer-input {
+            padding: 12px;
+            font-size: 20px;
+            width: 80%;
+            max-width: 300px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #answer-input:focus {
+            border-color: #32cd32;
+        }
+        #feedback {
+            font-size: 20px;
+            margin: 20px 0;
+            height: 24px;
+            color: #333;
+        }
+        #result-screen h2 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        #result-screen p {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .number-card {
+            display: inline-block;
+            width: 50px;
+            height: 70px;
+            line-height: 70px;
+            margin: 5px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            border: 2px solid #ddd;
+            font-size: 36px;
+            color: #333;
+        }
+        /* 반응형 디자인 */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 36px;
+            }
+            .button {
+                font-size: 20px;
+                padding: 12px 24px;
+            }
+            #answer-input {
+                font-size: 18px;
+            }
+            #question {
+                font-size: 24px;
+            }
+            .number-card {
+                width: 40px;
+                height: 60px;
+                line-height: 60px;
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>휘매쓰 연산 챌린지!</h1>
+
+    <!-- 난이도 선택 화면 -->
+    <div id="difficulty-selection">
+        <p style="font-size: 24px; color: #333;">난이도를 선택하세요:</p>
+        <button class="button" onclick="startGame('상')">상</button>
+        <button class="button" onclick="startGame('중')">중</button>
+        <button class="button" onclick="startGame('하')">하</button>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="game-screen">
+        <div id="total-time">총 소요 시간: <span id="total-time-elapsed">0</span>초</div>
+        <div id="chance">남은 기회: <span id="remaining-chances">3</span>/3</div>
+        <div id="score">점수: <span id="current-score">0</span></div>
+        <div id="question"></div>
+        <input type="text" id="answer-input" onkeypress="handleKeyPress(event)">
+        <button class="button" onclick="submitAnswer()">제출</button>
+        <div id="feedback"></div>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="result-screen">
+        <h2>게임 종료!</h2>
+        <p>최종 점수: <span id="final-score"></span></p>
+        <p>총 소요 시간: <span id="final-time"></span>초</p>
+        <button class="button" onclick="restartGame()">다시 시작</button>
+    </div>
+</div>
+
+<script>
+    // 문제 리스트
+    const problems = [
+        // 가장 큰 세자리 수 만들기
+        { questionType: "largest", numbers: [3, 5, 7], answer: "753" },
+        { questionType: "largest", numbers: [2, 6, 9], answer: "962" },
+        { questionType: "largest", numbers: [1, 4, 8], answer: "841" },
+        { questionType: "largest", numbers: [5, 6, 8], answer: "865" },
+        { questionType: "largest", numbers: [2, 3, 7], answer: "732" },
+        { questionType: "largest", numbers: [4, 5, 9], answer: "954" },
+        { questionType: "largest", numbers: [1, 7, 8], answer: "871" },
+        { questionType: "largest", numbers: [2, 5, 6], answer: "652" },
+        { questionType: "largest", numbers: [3, 4, 9], answer: "943" },
+        { questionType: "largest", numbers: [6, 7, 8], answer: "876" },
+        { questionType: "largest", numbers: [1, 5, 9], answer: "951" },
+        { questionType: "largest", numbers: [2, 4, 7], answer: "742" },
+        { questionType: "largest", numbers: [3, 6, 8], answer: "863" },
+        { questionType: "largest", numbers: [5, 7, 9], answer: "975" },
+        { questionType: "largest", numbers: [2, 4, 5], answer: "542" },
+        { questionType: "largest", numbers: [3, 7, 8], answer: "873" },
+        { questionType: "largest", numbers: [1, 6, 9], answer: "961" },
+        { questionType: "largest", numbers: [2, 5, 8], answer: "852" },
+        { questionType: "largest", numbers: [4, 6, 7], answer: "764" },
+        { questionType: "largest", numbers: [3, 5, 9], answer: "953" },
+        { questionType: "largest", numbers: [1, 2, 8], answer: "821" },
+        { questionType: "largest", numbers: [4, 5, 6], answer: "654" },
+        { questionType: "largest", numbers: [2, 7, 9], answer: "972" },
+        { questionType: "largest", numbers: [3, 6, 7], answer: "763" },
+        { questionType: "largest", numbers: [5, 8, 9], answer: "985" },
+
+        // 가장 작은 세자리 수 만들기
+        { questionType: "smallest", numbers: [3, 5, 7], answer: "357" },
+        { questionType: "smallest", numbers: [2, 6, 9], answer: "269" },
+        { questionType: "smallest", numbers: [1, 4, 8], answer: "148" },
+        { questionType: "smallest", numbers: [5, 6, 8], answer: "568" },
+        { questionType: "smallest", numbers: [2, 3, 7], answer: "237" },
+        { questionType: "smallest", numbers: [4, 5, 9], answer: "459" },
+        { questionType: "smallest", numbers: [1, 7, 8], answer: "178" },
+        { questionType: "smallest", numbers: [2, 5, 6], answer: "256" },
+        { questionType: "smallest", numbers: [3, 4, 9], answer: "349" },
+        { questionType: "smallest", numbers: [6, 7, 8], answer: "678" },
+        { questionType: "smallest", numbers: [1, 5, 9], answer: "159" },
+        { questionType: "smallest", numbers: [2, 4, 7], answer: "247" },
+        { questionType: "smallest", numbers: [3, 6, 8], answer: "368" },
+        { questionType: "smallest", numbers: [5, 7, 9], answer: "579" },
+        { questionType: "smallest", numbers: [2, 4, 5], answer: "245" },
+        { questionType: "smallest", numbers: [3, 7, 8], answer: "378" },
+        { questionType: "smallest", numbers: [1, 6, 9], answer: "169" },
+        { questionType: "smallest", numbers: [2, 5, 8], answer: "258" },
+        { questionType: "smallest", numbers: [4, 6, 7], answer: "467" },
+        { questionType: "smallest", numbers: [3, 5, 9], answer: "359" },
+        { questionType: "smallest", numbers: [1, 2, 8], answer: "128" },
+        { questionType: "smallest", numbers: [4, 5, 6], answer: "456" },
+        { questionType: "smallest", numbers: [2, 7, 9], answer: "279" },
+        { questionType: "smallest", numbers: [3, 6, 7], answer: "367" },
+        { questionType: "smallest", numbers: [5, 8, 9], answer: "589" }
+    ];
+
+    // 난이도 설정
+    const difficultyLevels = {
+        "상": { score: 20 },
+        "중": { score: 15 },
+        "하": { score: 10 }
+    };
+
+    let selectedDifficulty;
+    let scoreIncrement;
+    let score = 0;
+    let currentProblemIndex = 0;
+    let startTime;
+    let totalTimeElapsed = 0;
+    let remainingChances = 3;
+
+    const difficultySelection = document.getElementById('difficulty-selection');
+    const gameScreen = document.getElementById('game-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const currentScoreElement = document.getElementById('current-score');
+    const questionElement = document.getElementById('question');
+    const answerInput = document.getElementById('answer-input');
+    const feedbackElement = document.getElementById('feedback');
+    const finalScoreElement = document.getElementById('final-score');
+    const totalTimeElement = document.getElementById('total-time-elapsed');
+    const finalTimeElement = document.getElementById('final-time');
+    const remainingChancesElement = document.getElementById('remaining-chances');
+
+    function showScreen(screen) {
+        difficultySelection.style.display = 'none';
+        gameScreen.style.display = 'none';
+        resultScreen.style.display = 'none';
+
+        screen.style.display = 'block';
+    }
+
+    function startGame(difficulty) {
+        selectedDifficulty = difficulty;
+        scoreIncrement = difficultyLevels[difficulty].score;
+        score = 0;
+        totalTimeElapsed = 0;
+        currentProblemIndex = 0;
+        remainingChances = 3;
+
+        problems.sort(() => Math.random() - 0.5); // 문제 섞기
+
+        remainingChancesElement.textContent = remainingChances;
+
+        showScreen(gameScreen);
+        updateScore();
+        nextProblem();
+        startTime = Date.now();
+        setInterval(updateTotalTime, 1000);
+    }
+
+    function updateScore() {
+        currentScoreElement.textContent = score;
+    }
+
+    function updateTotalTime() {
+        totalTimeElapsed = Math.floor((Date.now() - startTime) / 1000);
+        totalTimeElement.textContent = totalTimeElapsed;
+    }
+
+    function nextProblem() {
+        if (remainingChances <= 0) {
+            endGame();
+            return;
+        }
+
+        if (currentProblemIndex >= problems.length) {
+            endGame();
+            return;
+        }
+
+        const currentProblem = problems[currentProblemIndex];
+        const numberCards = currentProblem.numbers;
+        questionElement.innerHTML = '';
+
+        // 문제 유형에 따라 질문 생성
+        const questionText = document.createElement('div');
+        questionText.textContent = `수카드 `;
+        questionText.style.display = 'inline';
+
+        numberCards.forEach((number) => {
+            const card = document.createElement('div');
+            card.className = 'number-card';
+            card.textContent = number;
+            questionText.appendChild(card);
+        });
+
+        const questionTail = document.createElement('div');
+        questionTail.textContent = `을 한 번씩만 사용하여 가장 ${currentProblem.questionType === 'largest' ? '큰' : '작은'} 세자리 수를 만드세요.`;
+        questionTail.style.display = 'inline';
+
+        questionElement.appendChild(questionText);
+        questionElement.appendChild(questionTail);
+
+        answerInput.value = '';
+        feedbackElement.textContent = '';
+        answerInput.focus();
+    }
+
+    function submitAnswer() {
+        const userAnswer = answerInput.value.trim();
+        const correctAnswer = problems[currentProblemIndex].answer;
+
+        if (userAnswer === correctAnswer) {
+            score += scoreIncrement;
+            feedbackElement.textContent = '정답입니다!';
+            feedbackElement.style.color = 'green';
+        } else {
+            feedbackElement.textContent = `오답입니다. 정답은 ${correctAnswer}입니다.`;
+            feedbackElement.style.color = 'red';
+            remainingChances--;
+            remainingChancesElement.textContent = remainingChances;
+        }
+
+        updateScore();
+        currentProblemIndex++;
+        if (remainingChances > 0) {
+            nextProblem();
+        } else {
+            endGame();
+        }
+    }
+
+    function endGame() {
+        clearInterval(updateTotalTime);
+        showScreen(resultScreen);
+        finalScoreElement.textContent = score;
+        finalTimeElement.textContent = totalTimeElapsed;
+    }
+
+    function restartGame() {
+        showScreen(difficultySelection);
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            submitAnswer();
+        }
+    }
+
+    // 게임 시작 시 난이도 선택 화면 표시
+    showScreen(difficultySelection);
+</script>
+
+</body>
+</html>
